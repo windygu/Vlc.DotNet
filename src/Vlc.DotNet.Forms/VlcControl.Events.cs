@@ -163,13 +163,58 @@ namespace Vlc.DotNet.Forms
         [Category("Media Player")]
         public event EventHandler<VlcMediaPlayerLengthChangedEventArgs> LengthChanged;
 
-        public void OnLengthChanged(float newLength)
+        public void OnLengthChanged(long newLength)
         {
             lock (myEventSyncLocker)
             {
                 var del = LengthChanged;
                 if (del != null)
                     del(this, new VlcMediaPlayerLengthChangedEventArgs(newLength));
+            }
+        }
+        #endregion
+
+        #region Log event
+        private object _logLocker = new object();
+
+        private EventHandler<VlcMediaPlayerLogEventArgs> log;
+
+        private void OnLogInternal(object sender, VlcMediaPlayerLogEventArgs args)
+        {
+            lock(this._logLocker)
+            {
+                if (this.log != null)
+                {
+                    this.log(sender, args);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The event that is triggered when a log is emitted from libVLC.
+        /// Listening to this event will discard the default logger in libvlc.
+        /// </summary>
+        [Category("Media Player")]
+        public event EventHandler<VlcMediaPlayerLogEventArgs> Log
+        {
+            add
+            {
+                lock (this._logLocker)
+                {
+                    this.log += value;
+                }
+                if (this.myVlcMediaPlayer != null)
+                {
+                    // Registers if not already done.
+                    this.RegisterLogging();
+                }
+            }
+            remove
+            {
+                lock (this._logLocker)
+                {
+                    this.log -= value;
+                }
             }
         }
         #endregion
@@ -387,7 +432,7 @@ namespace Vlc.DotNet.Forms
         [Category("Media Player")]
         public event EventHandler<VlcMediaPlayerTitleChangedEventArgs> TitleChanged;
 
-        public void OnTitleChanged(string newTitle)
+        public void OnTitleChanged(int newTitle)
         {
             lock (myEventSyncLocker)
             {

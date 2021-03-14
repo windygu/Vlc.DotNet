@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using System.Text;
-using Vlc.DotNet.Core.Interops.Signatures;
+﻿using Vlc.DotNet.Core.Interops.Signatures;
 
 namespace Vlc.DotNet.Core.Interops
 {
@@ -8,10 +6,10 @@ namespace Vlc.DotNet.Core.Interops
     {
         public VlcMediaInstance CreateNewMediaFromPath(string mrl)
         {
-            var handle = GCHandle.Alloc(Encoding.UTF8.GetBytes(mrl), GCHandleType.Pinned);
-            var result = VlcMediaInstance.New(this, GetInteropDelegate<CreateNewMediaFromPath>().Invoke(myVlcInstance, handle.AddrOfPinnedObject()));
-            handle.Free();
-            return result;
+            using (var handle = Utf8InteropStringConverter.ToUtf8StringHandle(mrl))
+            {
+                return VlcMediaInstance.New(this, myLibraryLoader.GetInteropDelegate<CreateNewMediaFromPath>().Invoke(myVlcInstance, handle));
+            }
         }
     }
 }

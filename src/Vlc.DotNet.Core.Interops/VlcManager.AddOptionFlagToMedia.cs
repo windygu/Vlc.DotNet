@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
-using System.Text;
 using Vlc.DotNet.Core.Interops.Signatures;
 
 namespace Vlc.DotNet.Core.Interops
@@ -11,9 +9,11 @@ namespace Vlc.DotNet.Core.Interops
         {
             if (mediaInstance == IntPtr.Zero)
                 throw new ArgumentException("Media instance is not initialized.");
-            var handle = GCHandle.Alloc(Encoding.UTF8.GetBytes(option), GCHandleType.Pinned);
-            GetInteropDelegate<AddOptionFlagToMedia>().Invoke(mediaInstance, handle.AddrOfPinnedObject(), flag);
-            handle.Free();
+
+            using (var handle = Utf8InteropStringConverter.ToUtf8StringHandle(option))
+            {
+                myLibraryLoader.GetInteropDelegate<AddOptionFlagToMedia>().Invoke(mediaInstance, handle, flag);
+            }
         }
     }
 }

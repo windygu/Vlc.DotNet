@@ -12,16 +12,13 @@ namespace Vlc.DotNet.Core
 
         private void OnMediaPlayerMediaChangedInternal(IntPtr ptr)
         {
-            var args = (VlcEventArg) Marshal.PtrToStructure(ptr, typeof (VlcEventArg));
-
-            OnMediaPlayerMediaChanged(new VlcMedia(this, VlcMediaInstance.New(Manager, args.MediaPlayerMediaChanged.MediaInstance)));
+            var args = MarshalHelper.PtrToStructure<VlcEventArg>(ptr);
+            OnMediaPlayerMediaChanged(new VlcMedia(this, VlcMediaInstance.New(Manager, args.eventArgsUnion.MediaPlayerMediaChanged.MediaInstance)));
         }
 
         public void OnMediaPlayerMediaChanged(VlcMedia media)
         {
-            var del = MediaChanged;
-            if (del != null)
-                del(this, new VlcMediaPlayerMediaChangedEventArgs(media));
+            MediaChanged?.Invoke(this, new VlcMediaPlayerMediaChangedEventArgs(media));
         }
     }
 }

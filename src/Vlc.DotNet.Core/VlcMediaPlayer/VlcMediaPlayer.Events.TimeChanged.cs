@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Runtime.InteropServices;
+using Vlc.DotNet.Core.Interops;
 using Vlc.DotNet.Core.Interops.Signatures;
 
 namespace Vlc.DotNet.Core
@@ -11,15 +11,13 @@ namespace Vlc.DotNet.Core
 
         private void OnMediaPlayerTimeChangedInternal(IntPtr ptr)
         {
-            var args = (VlcEventArg) Marshal.PtrToStructure(ptr, typeof (VlcEventArg));
-            OnMediaPlayerTimeChanged(args.MediaPlayerTimeChanged.NewTime);
+            var args = MarshalHelper.PtrToStructure<VlcEventArg>(ptr);
+            OnMediaPlayerTimeChanged(args.eventArgsUnion.MediaPlayerTimeChanged.NewTime);
         }
 
         public void OnMediaPlayerTimeChanged(long newTime)
         {
-            var del = TimeChanged;
-            if (del != null)
-                del(this, new VlcMediaPlayerTimeChangedEventArgs(newTime));
+            TimeChanged?.Invoke(this, new VlcMediaPlayerTimeChangedEventArgs(newTime));
         }
     }
 }

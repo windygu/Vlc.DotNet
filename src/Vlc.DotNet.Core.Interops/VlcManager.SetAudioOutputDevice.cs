@@ -1,5 +1,4 @@
-﻿using System;
-using Vlc.DotNet.Core.Interops.Signatures;
+﻿using Vlc.DotNet.Core.Interops.Signatures;
 
 namespace Vlc.DotNet.Core.Interops
 {
@@ -7,7 +6,11 @@ namespace Vlc.DotNet.Core.Interops
     {
         public void SetAudioOutputDevice(VlcMediaPlayerInstance mediaPlayerInstance, string audioOutputDescriptionName, string deviceName)
         {
-            GetInteropDelegate<SetAudioOutputDevice>().Invoke(mediaPlayerInstance, StringExtensions.ToHGlobalAnsi(audioOutputDescriptionName), StringExtensions.ToHGlobalAnsi(deviceName));
+            using (var audioOutputInterop = Utf8InteropStringConverter.ToUtf8StringHandle(audioOutputDescriptionName))
+            using (var deviceNameInterop = Utf8InteropStringConverter.ToUtf8StringHandle(audioOutputDescriptionName))
+            {
+                myLibraryLoader.GetInteropDelegate<SetAudioOutputDevice>().Invoke(mediaPlayerInstance, audioOutputInterop, deviceNameInterop);
+            }
         }
     }
 }

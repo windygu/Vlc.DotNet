@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using Vlc.DotNet.Core.Interops;
 using Vlc.DotNet.Core.Interops.Signatures;
@@ -10,47 +9,34 @@ namespace Vlc.DotNet.Core
     {
         private readonly VlcMediaPlayer myVlcMediaPlayer;
 
-        internal static Dictionary<VlcMediaPlayer, List<VlcMedia>> LoadedMedias { get; private set; }
-
-        static VlcMedia()
-        {
-            LoadedMedias = new Dictionary<VlcMediaPlayer, List<VlcMedia>>();
-        }
-
         internal VlcMedia(VlcMediaPlayer player, FileInfo file, params string[] options)
-#if NET20
-            : this(player, VlcMediaInstanceExtensions.AddOptionToMedia(player.Manager.CreateNewMediaFromPath(file.FullName), player.Manager, options))
-#else
             : this(player, player.Manager.CreateNewMediaFromPath(file.FullName).AddOptionToMedia(player.Manager, options))
-#endif
         {
         }
 
         internal VlcMedia(VlcMediaPlayer player, Uri uri, params string[] options)
-#if NET20
-            : this(player, VlcMediaInstanceExtensions.AddOptionToMedia(player.Manager.CreateNewMediaFromLocation(uri.AbsoluteUri), player.Manager, options))
-#else
             : this(player, player.Manager.CreateNewMediaFromLocation(uri.AbsoluteUri).AddOptionToMedia(player.Manager, options))
-#endif
         {
         }
         
         internal VlcMedia(VlcMediaPlayer player, string mrl, params string[] options)
-#if NET20
-            : this(player, VlcMediaInstanceExtensions.AddOptionToMedia(player.Manager.CreateNewMediaFromLocation(mrl), player.Manager, options))
-#else
             : this(player, player.Manager.CreateNewMediaFromLocation(mrl).AddOptionToMedia(player.Manager, options))
-#endif
+        {
+        }
+
+        internal VlcMedia(VlcMediaPlayer player, Stream stream, params string[] options)
+            : this(player, player.Manager.CreateNewMediaFromStream(stream).AddOptionToMedia(player.Manager, options))
         {
         }
 
         internal VlcMedia(VlcMediaPlayer player, VlcMediaInstance mediaInstance)
         {
-            if(!LoadedMedias.ContainsKey(player))
-                LoadedMedias[player] = new List<VlcMedia>();
-            LoadedMedias[player].Add(this);
             MediaInstance = mediaInstance;
             myVlcMediaPlayer = player;
+        }
+
+        internal void Initialize()
+        {
             RegisterEvents();
         }
 
@@ -68,7 +54,7 @@ namespace Vlc.DotNet.Core
 
         public TimeSpan Duration
         {
-            get { return new TimeSpan(myVlcMediaPlayer.Manager.GetMediaDuration(MediaInstance) * 10000); }
+            get { return TimeSpan.FromMilliseconds(myVlcMediaPlayer.Manager.GetMediaDuration(MediaInstance)); }
         }
 
         public void Dispose()
@@ -78,11 +64,12 @@ namespace Vlc.DotNet.Core
 
         private void Dispose(bool disposing)
         {
-            if (MediaInstance != IntPtr.Zero)
+            if (disposing && MediaInstance != IntPtr.Zero)
             {
                 UnregisterEvents();
                 MediaInstance.Dispose();
             }
+
             GC.SuppressFinalize(this);
         }
 
@@ -104,6 +91,12 @@ namespace Vlc.DotNet.Core
             get { return myVlcMediaPlayer.Manager.GetMediaStats(MediaInstance); }
         }
 
+        public MediaTrack[] Tracks
+        {
+            get { return myVlcMediaPlayer.Manager.GetMediaTracks(MediaInstance); }
+        }
+
+        [Obsolete("Use Tracks instead")]
         public MediaTrackInfosStructure[] TracksInformations
         {
             get { return myVlcMediaPlayer.Manager.GetMediaTracksInformations(MediaInstance); }

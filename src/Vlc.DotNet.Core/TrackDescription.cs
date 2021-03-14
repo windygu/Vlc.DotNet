@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using Vlc.DotNet.Core.Interops;
 using Vlc.DotNet.Core.Interops.Signatures;
 
 namespace Vlc.DotNet.Core
@@ -22,8 +23,8 @@ namespace Vlc.DotNet.Core
             var result = new List<TrackDescription>();
             if (moduleRef != IntPtr.Zero)
             {
-                var module = (TrackDescriptionStructure)Marshal.PtrToStructure(moduleRef, typeof(TrackDescriptionStructure));
-                var name = Encoding.UTF8.GetString(Encoding.Default.GetBytes(module.Name));
+                var module = MarshalHelper.PtrToStructure<TrackDescriptionStructure>(moduleRef);
+                var name = Utf8InteropStringConverter.Utf8InteropToString(module.Name);
                 result.Add(new TrackDescription(module.Id, name));
                 var data = GetSubTrackDescription(module.NextTrackDescription);
                 result.AddRange(data);

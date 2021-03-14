@@ -13,6 +13,12 @@ namespace Vlc.DotNet.Forms
     {
         private VlcMediaPlayer myVlcMediaPlayer;
 
+        /// <summary>
+        /// Gets the media player.
+        /// It can be useful in order to achieve lower-level operations that are not available in the control.
+        /// </summary>
+        public VlcMediaPlayer VlcMediaPlayer => this.myVlcMediaPlayer;
+
         #region VlcControl Init
 
         public VlcControl()
@@ -26,12 +32,38 @@ namespace Vlc.DotNet.Forms
             BackColor = System.Drawing.Color.Black;
         }
 
-        [Category("Media Player")]
-        public string[] VlcMediaplayerOptions { get; set; }
+        private string[] _vlcMediaPlayerOptions = null;
 
         [Category("Media Player")]
+        public string[] VlcMediaplayerOptions
+        {
+            get { return this._vlcMediaPlayerOptions; }
+            set
+            {
+                if (!(myVlcMediaPlayer is null))
+                {
+                    throw new InvalidOperationException("Cannot modify VlcMediaplayerOptions if Media player has already been initialized. Modify VlcMediaplayerOptions before calling EndInit.");
+                }
+
+                this._vlcMediaPlayerOptions = value;
+            }
+        }
+
+        private DirectoryInfo _vlcLibDirectory = null;
+        [Category("Media Player")]
         [Editor(typeof(DirectoryEditor), typeof(UITypeEditor))]
-        public DirectoryInfo VlcLibDirectory { get; set; }
+        public DirectoryInfo VlcLibDirectory {
+            get { return this._vlcLibDirectory; }
+            set
+            {
+                if (!(myVlcMediaPlayer is null))
+                {
+                    throw new InvalidOperationException("Cannot modify VlcLibDirectory if Media player has already been initialized. Modify VlcLibDirectory before calling EndInit.");
+                }
+
+                this._vlcLibDirectory = value;
+            }
+        }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         [Browsable(false)]
@@ -57,9 +89,9 @@ namespace Vlc.DotNet.Forms
 
         public void EndInit()
         {
-            if (IsInDesignMode() || myVlcMediaPlayer != null)
+            if (IsInDesignMode || myVlcMediaPlayer != null)
                 return;
-            if (VlcLibDirectory == null && (VlcLibDirectory = OnVlcLibDirectoryNeeded()) == null)
+            if (_vlcLibDirectory == null && (_vlcLibDirectory = OnVlcLibDirectoryNeeded()) == null)
             {
                 throw new Exception("'VlcLibDirectory' must be set.");
             }
@@ -72,25 +104,51 @@ namespace Vlc.DotNet.Forms
             {
                 myVlcMediaPlayer = new VlcMediaPlayer(VlcLibDirectory, VlcMediaplayerOptions);
             }
+
+            if (this.log != null)
+            {
+                this.RegisterLogging();
+            }
             myVlcMediaPlayer.VideoHostControlHandle = Handle;
+
             RegisterEvents();
         }
 
-        // work around http://stackoverflow.com/questions/34664/designmode-with-controls/708594
-        private static bool IsInDesignMode()
+        private bool loggingRegistered = false;
+
+        /// <summary>
+        /// Connects (only the first time) the events from <see cref="myVlcMediaPlayer"/> to the event handlers registered on this instance
+        /// </summary>
+        private void RegisterLogging()
         {
-            return System.Reflection.Assembly.GetExecutingAssembly().Location.Contains("VisualStudio");
+            if (this.loggingRegistered)
+                return;
+            this.myVlcMediaPlayer.Log += this.OnLogInternal;
+            this.loggingRegistered = true;
+        }
+
+        // work around https://stackoverflow.com/questions/34664/designmode-with-nested-controls/2693338#2693338
+        private bool IsInDesignMode
+        {
+            get
+            {
+                if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+                    return true;
+
+                Control ctrl = this;
+                while (ctrl != null)
+                {
+                    if ((ctrl.Site != null) && ctrl.Site.DesignMode)
+                        return true;
+                    ctrl = ctrl.Parent;
+                }
+                return false;
+            }
         }
 
         public event EventHandler<VlcLibDirectoryNeededEventArgs> VlcLibDirectoryNeeded;
 
         bool disposed = false;
-
-        protected void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
 
         protected override void Dispose(bool disposing)
         {
@@ -101,15 +159,13 @@ namespace Vlc.DotNet.Forms
                     if (myVlcMediaPlayer != null)
                     {
                         UnregisterEvents();
-                        if (IsPlaying)
-                            Stop();
                         myVlcMediaPlayer.Dispose();
                     }
                     myVlcMediaPlayer = null;
-                    base.Dispose(disposing);
                 }
                 disposed = true;
             }
+            base.Dispose(disposing);
         }
 
         public DirectoryInfo OnVlcLibDirectoryNeeded()
@@ -129,50 +185,44 @@ namespace Vlc.DotNet.Forms
 
         public void Play()
         {
-            //EndInit();
-            if (myVlcMediaPlayer != null)
-            {
-                myVlcMediaPlayer.Play();
-            }
+            myVlcMediaPlayer?.Play();
         }
 
         public void Play(FileInfo file, params string[] options)
         {
-            //EndInit();
-            if (myVlcMediaPlayer != null)
-            {
-                myVlcMediaPlayer.SetMedia(file, options);
-                Play();
-            }
+            myVlcMediaPlayer?.Play(file, options);
         }
 
         public void Play(Uri uri, params string[] options)
         {
-            //EndInit();
-            if (myVlcMediaPlayer != null)
-            {
-                myVlcMediaPlayer.SetMedia(uri, options);
-                Play();
-            }
+            myVlcMediaPlayer?.Play(uri, options);
         }
 
         public void Play(string mrl, params string[] options)
         {
-            //EndInit();
-            if (myVlcMediaPlayer != null)
-            {
-                myVlcMediaPlayer.SetMedia(mrl, options);
-                Play();
-            }
+            myVlcMediaPlayer?.Play(mrl, options);
         }
 
+        public void Play(Stream stream, params string[] options)
+        {
+            myVlcMediaPlayer?.Play(stream, options);
+        }
+
+        /// <summary>
+        /// Toggle pause (no effect if there is no media) 
+        /// </summary>
         public void Pause()
         {
-            //EndInit();
-            if (myVlcMediaPlayer != null)
-            {
-                myVlcMediaPlayer.Pause();
-            }
+            myVlcMediaPlayer?.Pause();
+        }
+
+        /// <summary>
+        /// Pause or resume (no effect if there is no media) 
+        /// </summary>
+        /// <param name="doPause">If set to <c>true</c>, pauses the media, resumes if <c>false</c></param>
+        public void SetPause(bool doPause)
+        {
+            myVlcMediaPlayer?.SetPause(doPause);
         }
 
         public void Stop()
@@ -197,11 +247,49 @@ namespace Vlc.DotNet.Forms
                 return null;
             }
         }
-        
-        public void TakeSnapshot(string fileName) 
+
+        /// <summary>
+        /// Takes a snapshot of the currently playing video and saves it to the given file
+        /// </summary>
+        /// <param name="fileName">The name of the file to be written</param>
+        public bool TakeSnapshot(string fileName)
         {
-            FileInfo fileInfo = new FileInfo(fileName);
-            myVlcMediaPlayer.TakeSnapshot(fileInfo);
+            return this.TakeSnapshot(fileName, 0, 0);
+        }
+
+        /// <summary>
+        /// Takes a snapshot of the currently playing video and saves it to the given file
+        /// </summary>
+        /// <remarks>If width AND height is 0, original size is used. If width XOR height is 0, original aspect-ratio is preserved.</remarks>
+        /// <param name="fileName">The name of the file to be written</param>
+        /// <param name="width">The width of the snapshot (0 means auto)</param>
+        /// <param name="height">The height of the snapshot (0 means auto)</param>
+        public bool TakeSnapshot(string fileName, uint width, uint height)
+        {
+            return this.TakeSnapshot(new FileInfo(fileName), width, height);
+        }
+
+
+        /// <summary>
+        /// Takes a snapshot of the currently playing video and saves it to the given file
+        /// </summary>
+        /// <param name="file">The file to be written</param>
+        public bool TakeSnapshot(FileInfo file)
+        {
+            return this.TakeSnapshot(file, 0, 0);
+        }
+
+
+        /// <summary>
+        /// Takes a snapshot of the currently playing video and saves it to the given file
+        /// </summary>
+        /// <remarks>If width AND height is 0, original size is used. If width XOR height is 0, original aspect-ratio is preserved.</remarks>
+        /// <param name="file">The file to be written</param>
+        /// <param name="width">The width of the snapshot (0 means auto)</param>
+        /// <param name="height">The height of the snapshot (0 means auto)</param>
+        public bool TakeSnapshot(FileInfo file, uint width, uint height)
+        {
+            return this.myVlcMediaPlayer.TakeSnapshot(file, width, height);
         }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -411,6 +499,17 @@ namespace Vlc.DotNet.Forms
         {
             //EndInit();
             myVlcMediaPlayer.SetMedia(mrl, options);
+        }
+
+        public void SetMedia(Stream stream, params string[] options)
+        {
+            //EndInit();
+            myVlcMediaPlayer.SetMedia(stream, options);
+        }
+
+        public void ResetMedia()
+        {
+            myVlcMediaPlayer.ResetMedia();
         }
         #endregion
     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using Vlc.DotNet.Core.Interops;
 using Vlc.DotNet.Core.Interops.Signatures;
 
 namespace Vlc.DotNet.Core
@@ -11,16 +12,14 @@ namespace Vlc.DotNet.Core
 
         private void OnMediaPlayerSnapshotTakenInternal(IntPtr ptr)
         {
-            var args = (VlcEventArg) Marshal.PtrToStructure(ptr, typeof (VlcEventArg));
-            var fileName = Marshal.PtrToStringAnsi(args.MediaPlayerSnapshotTaken.pszFilename);
+            var args = MarshalHelper.PtrToStructure<VlcEventArg>(ptr);
+            var fileName = Utf8InteropStringConverter.Utf8InteropToString(args.eventArgsUnion.MediaPlayerSnapshotTaken.pszFilename);
             OnMediaPlayerSnapshotTaken(fileName);
         }
 
         public void OnMediaPlayerSnapshotTaken(string fileName)
         {
-            var del = SnapshotTaken;
-            if (del != null)
-                del(this, new VlcMediaPlayerSnapshotTakenEventArgs(fileName));
+            SnapshotTaken?.Invoke(this, new VlcMediaPlayerSnapshotTakenEventArgs(fileName));
         }
     }
 }

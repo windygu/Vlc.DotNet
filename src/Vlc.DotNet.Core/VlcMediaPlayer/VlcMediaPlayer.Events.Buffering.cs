@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using Vlc.DotNet.Core.Interops;
 using Vlc.DotNet.Core.Interops.Signatures;
 
 namespace Vlc.DotNet.Core
@@ -11,15 +12,13 @@ namespace Vlc.DotNet.Core
 
         private void OnMediaPlayerBufferingInternal(IntPtr ptr)
         {
-            var args = (VlcEventArg) Marshal.PtrToStructure(ptr, typeof (VlcEventArg));
-            OnMediaPlayerBuffering(args.MediaPlayerBuffering.NewCache);
+            var args = MarshalHelper.PtrToStructure<VlcEventArg>(ptr);
+            OnMediaPlayerBuffering(args.eventArgsUnion.MediaPlayerBuffering.NewCache);
         }
 
         public void OnMediaPlayerBuffering(float newCache)
         {
-            var del = Buffering;
-            if (del != null)
-                del(this, new VlcMediaPlayerBufferingEventArgs(newCache));
+            Buffering?.Invoke(this, new VlcMediaPlayerBufferingEventArgs(newCache));
         }
     }
 }

@@ -7,7 +7,7 @@ namespace Vlc.DotNet.Core.Interops
     {
         public VlcMediaPlayerInstance CreateMediaPlayer()
         {
-            return new VlcMediaPlayerInstance(this, GetInteropDelegate<CreateMediaPlayer>().Invoke(myVlcInstance));
+            return new VlcMediaPlayerInstance(this, myLibraryLoader.GetInteropDelegate<CreateMediaPlayer>().Invoke(myVlcInstance));
         }
     }
 }
